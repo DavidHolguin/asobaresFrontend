@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react'; // Cambiado a QRCodeSVG
 import axios from 'axios';
 
 const CardView = () => {
@@ -73,7 +73,7 @@ const CardView = () => {
                   </div>
 
                   <div className="mt-4">
-                    <QRCode 
+                    <QRCodeSVG
                       value={cardUrl}
                       size={200}
                       level="H"

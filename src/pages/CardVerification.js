@@ -1,6 +1,7 @@
+// CardVerification.js
 import React, { useState } from 'react';
 import Webcam from 'react-webcam';
-import { QrReader } from 'react-qr-reader';
+import QrScanner from 'react-qr-scanner';
 import axios from 'axios';
 
 const CardVerification = () => {
@@ -26,9 +27,14 @@ const CardVerification = () => {
 
   const handleScan = (data) => {
     if (data) {
-      const cardId = data.split('/').pop();
+      const cardId = data.text.split('/').pop();
       verifyCard(cardId);
     }
+  };
+
+  const handleError = (err) => {
+    console.error(err);
+    setError('Error al acceder a la cámara');
   };
 
   const handleManualVerify = (e) => {
@@ -52,9 +58,14 @@ const CardVerification = () => {
 
         {showScanner && (
           <div className="aspect-square">
-            <QrReader
-              onResult={handleScan}
+            <QrScanner
+              delay={300}
+              onError={handleError}
+              onScan={handleScan}
               style={{ width: '100%' }}
+              constraints={{
+                facingMode: { exact: "environment" }
+              }}
             />
           </div>
         )}
