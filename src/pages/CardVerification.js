@@ -1,7 +1,5 @@
-// CardVerification.js
-import React, { useState } from 'react';
-import Webcam from 'react-webcam';
-import QrScanner from 'react-qr-scanner';
+import React, { useState, useEffect } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
 
 const CardVerification = () => {
@@ -10,6 +8,15 @@ const CardVerification = () => {
   const [cardData, setCardData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [html5QrCode, setHtml5QrCode] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (html5QrCode) {
+        html5QrCode.stop().catch(error => console.error(error));
+      }
+    };
+  }, [html5QrCode]);
 
   const verifyCard = async (id) => {
     setLoading(true);
@@ -25,16 +32,53 @@ const CardVerification = () => {
     }
   };
 
-  const handleScan = (data) => {
-    if (data) {
-      const cardId = data.text.split('/').pop();
-      verifyCard(cardId);
+  const startScanner = async () => {
+    try {
+      const scanner = new Html5Qrcode("qr-reader");
+      setHtml5QrCode(scanner);
+      
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        async (decodedText) => {
+          // Successful scan
+          const cardId = decodedText.split('/').pop();
+          await verifyCard(cardId);
+          await scanner.stop();
+          setShowScanner(false);
+        },
+        (errorMessage) => {
+          // Error or waiting for QR
+          console.log(errorMessage);
+        }
+      );
+    } catch (err) {
+      console.error("Error starting scanner:", err);
+      setError('Error al iniciar la cámara');
     }
   };
 
-  const handleError = (err) => {
-    console.error(err);
-    setError('Error al acceder a la cámara');
+  const stopScanner = async () => {
+    if (html5QrCode) {
+      try {
+        await html5QrCode.stop();
+        setHtml5QrCode(null);
+      } catch (err) {
+        console.error("Error stopping scanner:", err);
+      }
+    }
+  };
+
+  const toggleScanner = async () => {
+    if (showScanner) {
+      await stopScanner();
+    } else {
+      await startScanner();
+    }
+    setShowScanner(!showScanner);
   };
 
   const handleManualVerify = (e) => {
@@ -50,21 +94,20 @@ const CardVerification = () => {
       
       <div className="space-y-4">
         <button
-          onClick={() => setShowScanner(!showScanner)}
+          onClick={toggleScanner}
           className="btn-primary w-full"
         >
           {showScanner ? 'Ocultar Scanner' : 'Mostrar Scanner QR'}
         </button>
 
         {showScanner && (
-          <div className="aspect-square">
-            <QrScanner
-              delay={300}
-              onError={handleError}
-              onScan={handleScan}
-              style={{ width: '100%' }}
-              constraints={{
-                facingMode: { exact: "environment" }
+          <div className="aspect-square relative">
+            <div 
+              id="qr-reader" 
+              className="w-full"
+              style={{ 
+                aspectRatio: '1',
+                maxWidth: '100%'
               }}
             />
           </div>

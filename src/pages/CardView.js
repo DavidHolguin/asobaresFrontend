@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react'; // Cambiado a QRCodeSVG
+import { QRCodeSVG } from 'qrcode.react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 import axios from 'axios';
 
 const CardView = () => {
@@ -8,6 +9,7 @@ const CardView = () => {
   const [cardData, setCardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     const fetchCardData = async () => {
@@ -25,6 +27,44 @@ const CardView = () => {
       fetchCardData();
     }
   }, [id]);
+
+  useEffect(() => {
+    let html5QrcodeScanner;
+
+    if (showScanner) {
+      html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        { 
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        }
+      );
+      
+      const onScanSuccess = (decodedText, decodedResult) => {
+        console.log(`Código escaneado: ${decodedText}`, decodedResult);
+        if (decodedText.includes('/card/')) {
+          window.location.href = decodedText;
+        }
+        html5QrcodeScanner.clear();
+        setShowScanner(false);
+      };
+
+      const onScanError = (err) => {
+        console.warn(`Error de escaneo: ${err}`);
+      };
+
+      html5QrcodeScanner.render(onScanSuccess, onScanError);
+    }
+
+    return () => {
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(error => {
+          console.error("Failed to clear html5QrcodeScanner", error);
+        });
+      }
+    };
+  }, [showScanner]);
 
   if (loading) return <div>Cargando...</div>;
   if (error) return <div>{error}</div>;
@@ -80,6 +120,17 @@ const CardView = () => {
                       includeMargin={true}
                     />
                   </div>
+
+                  <button
+                    onClick={() => setShowScanner(!showScanner)}
+                    className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 transition-colors"
+                  >
+                    {showScanner ? 'Ocultar Scanner' : 'Escanear QR'}
+                  </button>
+
+                  {showScanner && (
+                    <div id="reader" className="w-full"></div>
+                  )}
 
                   <p className="text-sm text-gray-500 break-all">
                     ID: {cardData.card_id}
